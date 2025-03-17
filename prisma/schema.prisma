@@ -1,0 +1,124 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// Модель пользователя (организатора)
+model User {
+  id        Int       @id @default(autoincrement())
+  email     String    @unique
+  password  String
+  name      String
+  phone     String?
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
+  groups    Group[]
+}
+
+// Модель авиакомпании
+model Airline {
+  id      Int      @id @default(autoincrement())
+  name    String
+  code    String   @unique
+  flights Flight[]
+}
+
+// Модель рейса
+model Flight {
+  id           Int       @id @default(autoincrement())
+  flightNumber String
+  departureAirport String
+  arrivalAirport   String
+  departureTime    DateTime
+  arrivalTime      DateTime
+  airlineId    Int
+  airline      Airline   @relation(fields: [airlineId], references: [id])
+  groups       Group[]
+  seatMap      Seat[]
+}
+
+// Модель группы пассажиров
+model Group {
+  id          Int        @id @default(autoincrement())
+  name        String
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+  flightId    Int
+  flight      Flight     @relation(fields: [flightId], references: [id])
+  userId      Int
+  user        User       @relation(fields: [userId], references: [id])
+  passengers  Passenger[]
+}
+
+// Модель пассажира
+model Passenger {
+  id          Int         @id @default(autoincrement())
+  firstName   String
+  lastName    String
+  passportNumber String
+  email       String?
+  phone       String?
+  dateOfBirth DateTime?
+  groupId     Int
+  group       Group       @relation(fields: [groupId], references: [id])
+  seatId      Int?
+  seat        Seat?       @relation(fields: [seatId], references: [id])
+  additionalServices AdditionalService[]
+  boardingPass BoardingPass?
+}
+
+// Модель места в самолете
+model Seat {
+  id          Int        @id @default(autoincrement())
+  seatNumber  String
+  seatClass   SeatClass  @default(ECONOMY)
+  isAvailable Boolean    @default(true)
+  flightId    Int
+  flight      Flight     @relation(fields: [flightId], references: [id])
+  passengers  Passenger[]
+}
+
+// Перечисление классов мест
+enum SeatClass {
+  ECONOMY
+  BUSINESS
+  FIRST
+}
+
+// Модель дополнительной услуги
+model AdditionalService {
+  id          Int         @id @default(autoincrement())
+  type        ServiceType
+  description String?
+  cost        Float
+  passengerId Int
+  passenger   Passenger   @relation(fields: [passengerId], references: [id])
+}
+
+// Перечисление типов дополнительных услуг
+enum ServiceType {
+  EXTRA_BAGGAGE
+  SPECIAL_MEAL
+  INSURANCE
+  PRIORITY_BOARDING
+}
+
+// Модель посадочного талона
+model BoardingPass {
+  id           Int         @id @default(autoincrement())
+  passengerId  Int         @unique
+  passenger    Passenger   @relation(fields: [passengerId], references: [id])
+  boardingTime DateTime
+  gate         String?
+  qrCode       String?     // URL или путь к сгенерированному QR-коду
+  pdfUrl       String?     // URL или путь к сгенерированному PDF
+  emailSent    Boolean     @default(false)
+  createdAt    DateTime    @default(now())
+} 
